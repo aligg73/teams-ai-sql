@@ -71,7 +71,7 @@ export class SequenceAugmentation implements Augmentation<Plan | undefined> {
         this._section = new ActionAugmentationSection(
             actions,
             [
-                `Use the actions above to create a plan in the following JSON format:`,
+                `Use the actions above to create a plan in the following compact JSON format, without using \n for newlines:`,
                 `{"type":"plan","commands":[{"type":"DO","action":"<name>","parameters":{"<name>":<value>}},{"type":"SAY","response":"<response>"}]}`
             ].join('\n')
         );
