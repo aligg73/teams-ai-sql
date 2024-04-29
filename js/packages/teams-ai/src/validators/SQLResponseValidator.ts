@@ -15,7 +15,10 @@ export class SQLResponseValidator<TValue = string> implements PromptResponseVali
      * @param {string} tooLargeFeedback Optional. Custom feedback message to display when the SQL response is too large. Defaults to 'The SQL response was too large to feed into a model context window, adjust the SQL to limit the results'.
      * @param {number} maxTokenCount Optional. Maximum allowed token count for the SQL response. Defaults to 7000.
      */
-    public constructor(tooLargeFeedback: string = 'The SQL response was too large to feed into a model context window, adjust the SQL to limit the results', maxTokenCount: number = 7000) {
+    public constructor(
+        tooLargeFeedback: string = 'The SQL response was too large to feed into a model context window, adjust the SQL to limit the results',
+        maxTokenCount: number = 7000
+    ) {
         this.tooLargeFeedback = tooLargeFeedback;
         this.maxTokenCount = maxTokenCount;
     }
