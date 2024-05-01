@@ -6,7 +6,14 @@ import { Memory } from '../MemoryFork';
 import { Parser } from 'node-sql-parser'; // Import the parse function from the node-sql-parser package
 
 /**
- * Validates a SQL response to ensure it has valid syntax.
+ * Interface for a function that executes SQL queries against the database.
+ */
+interface SQLQueryExecutor {
+    (sqlQuery: string): Promise<any>; // Modify the return type as per your database response
+}
+
+/**
+ * Validates a SQL response to ensure it has valid syntax and optionally executes an EXPLAIN query on the actual database.
  */
 export class SQLResponseValidator<TValue = string> implements PromptResponseValidator<TValue> {
     /**
@@ -15,11 +22,18 @@ export class SQLResponseValidator<TValue = string> implements PromptResponseVali
     public invalidSQLFeedback: string;
 
     /**
+     * Function to execute SQL queries against the database.
+     */
+    private sqlQueryExecutor: SQLQueryExecutor;
+
+    /**
      * Creates a new `SQLResponseValidator` instance.
+     * @param {SQLQueryExecutor} sqlQueryExecutor Function to execute SQL queries against the database.
      * @param {string} invalidSQLFeedback Optional. Custom feedback message to display when the SQL response has invalid syntax.
      * Defaults to 'The provided SQL response has invalid syntax.'.
      */
-    public constructor(invalidSQLFeedback: string = 'The provided SQL response has invalid syntax.') {
+    public constructor(sqlQueryExecutor: SQLQueryExecutor, invalidSQLFeedback: string = 'The provided SQL response has invalid syntax.') {
+        this.sqlQueryExecutor = sqlQueryExecutor;
         this.invalidSQLFeedback = invalidSQLFeedback;
     }
 
@@ -44,11 +58,21 @@ export class SQLResponseValidator<TValue = string> implements PromptResponseVali
 
         // Check if the SQL syntax is valid
         if (this.isValidSQL(sqlString)) {
-            return {
-                type: 'Validation',
-                valid: true,
-                value: sqlString
-            };
+            try {
+                // Execute EXPLAIN query on the actual database
+                await this.sqlQueryExecutor(`EXPLAIN ${sqlString}`);
+                return {
+                    type: 'Validation',
+                    valid: true,
+                    value: sqlString
+                };
+            } catch (error) {
+                return {
+                    type: 'Validation',
+                    valid: false,
+                    feedback: (error as Error).message
+                };
+            }
         } else {
             return {
                 type: 'Validation',
