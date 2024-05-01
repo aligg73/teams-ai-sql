@@ -2,36 +2,26 @@ import { TurnContext } from 'botbuilder';
 import { Tokenizer } from '../tokenizers';
 import { PromptResponse } from '../models';
 import { Validation, PromptResponseValidator } from './PromptResponseValidator';
-import { Response } from './Response';
 import { Memory } from '../MemoryFork';
-import openaiTokenCounter from 'openai-gpt-token-counter';
+import { Parser } from 'node-sql-parser'; // Import the parse function from the node-sql-parser package
 
 /**
- * Validates a SQL response to ensure it stays under a certain threshold of LLM token size.
+ * Validates a SQL response to ensure it has valid syntax.
  */
 export class SQLResponseValidator<TValue = string> implements PromptResponseValidator<TValue> {
     /**
+     * Feedback message to display when the SQL response has invalid syntax.
+     */
+    public invalidSQLFeedback: string;
+
+    /**
      * Creates a new `SQLResponseValidator` instance.
-     * @param {string} tooLargeFeedback Optional. Custom feedback message to display when the SQL response is too large. Defaults to 'The SQL response was too large to feed into a model context window, adjust the SQL to limit the results'.
-     * @param {number} maxTokenCount Optional. Maximum allowed token count for the SQL response. Defaults to 7000.
+     * @param {string} invalidSQLFeedback Optional. Custom feedback message to display when the SQL response has invalid syntax.
+     * Defaults to 'The provided SQL response has invalid syntax.'.
      */
-    public constructor(
-        tooLargeFeedback: string = 'The SQL response was too large to feed into a model context window, adjust the SQL to limit the results',
-        maxTokenCount: number = 7000
-    ) {
-        this.tooLargeFeedback = tooLargeFeedback;
-        this.maxTokenCount = maxTokenCount;
+    public constructor(invalidSQLFeedback: string = 'The provided SQL response has invalid syntax.') {
+        this.invalidSQLFeedback = invalidSQLFeedback;
     }
-
-    /**
-     * Feedback message to display when the SQL response is too large.
-     */
-    public tooLargeFeedback: string;
-
-    /**
-     * Maximum allowed token count for the SQL response.
-     */
-    public maxTokenCount: number;
 
     /**
      * Validates a SQL response.
@@ -42,7 +32,7 @@ export class SQLResponseValidator<TValue = string> implements PromptResponseVali
      * @param {number} remaining_attempts Number of remaining attempts to validate the response.
      * @returns {Promise<Validation>} A `Validation` object.
      */
-    public validateResponse(
+    public async validateResponse(
         context: TurnContext,
         memory: Memory,
         tokenizer: Tokenizer,
@@ -50,26 +40,37 @@ export class SQLResponseValidator<TValue = string> implements PromptResponseVali
         remaining_attempts: number
     ): Promise<Validation> {
         const message = response.message!;
-        const text = message.content ?? '';
+        const sqlString = message.content ?? '';
 
-        // Parse the SQL response
-        const parsedResults = Response.parseAllObjects(text);
-
-        // Count the tokens in the parsed results
-        const tokenCount = openaiTokenCounter.text(text, 'gpt-4');
-
-        if (tokenCount > this.maxTokenCount) {
-            return Promise.resolve({
-                type: 'Validation',
-                valid: false,
-                feedback: this.tooLargeFeedback
-            });
-        } else {
-            return Promise.resolve({
+        // Check if the SQL syntax is valid
+        if (this.isValidSQL(sqlString)) {
+            return {
                 type: 'Validation',
                 valid: true,
-                value: parsedResults
-            });
+                value: sqlString
+            };
+        } else {
+            return {
+                type: 'Validation',
+                valid: false,
+                feedback: this.invalidSQLFeedback
+            };
+        }
+    }
+
+    /**
+     * Checks if the provided SQL string has valid syntax.
+     * @param {string} sqlString The SQL string to check.
+     * @returns {boolean} True if the SQL syntax is valid, otherwise false.
+     */
+    private isValidSQL(sqlString: string): boolean {
+        try {
+            // Attempt to parse the SQL string
+            const parser = new Parser();
+            parser.astify(sqlString);
+            return true; // The SQL syntax is valid
+        } catch (error) {
+            return false; // The SQL syntax is invalid
         }
     }
 }
