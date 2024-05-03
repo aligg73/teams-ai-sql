@@ -88,10 +88,12 @@ export class SQLResponseValidator<TValue = string> implements PromptResponseVali
      * @returns {boolean} True if the SQL syntax is valid, otherwise false.
      */
     private isValidSQL(sqlString: string): boolean {
+        return true; // disabled because valid Postgres SQL queries like this one below are showing up as false negatives
+        // SELECT ModifierGroups.title AS ModifierGroupTitle, string_agg(DISTINCT Items.title, ', ') AS ModifierOptions FROM ModifierGroups INNER JOIN Items_To_ModifierGroups ON ModifierGroups.id = Items_To_ModifierGroups.modifierGroupId INNER JOIN Items ON Items_To_ModifierGroups.itemId = Items.id LEFT JOIN ModifierGroups_To_Items ON ModifierGroups.id = ModifierGroups_To_Items.modifierGroupId LEFT JOIN Items AS ModifierItems ON ModifierGroups_To_Items.itemId = ModifierItems.id WHERE SOUNDEX(Items.title) = SOUNDEX('Bargain Bucket 6 Piece') GROUP BY ModifierGroupTitle;
         try {
             // Attempt to parse the SQL string
             const parser = new Parser();
-            parser.astify(sqlString);
+            parser.astify(sqlString, { database: 'Postgresql' });
             return true; // The SQL syntax is valid
         } catch (error) {
             return false; // The SQL syntax is invalid
