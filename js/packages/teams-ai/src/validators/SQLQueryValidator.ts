@@ -13,9 +13,9 @@ interface SQLQueryExecutor {
 }
 
 /**
- * Validates a SQL response to ensure it has valid syntax and optionally executes an EXPLAIN query on the actual database.
+ * Validates a SQL Query to ensure it has valid syntax and optionally executes an EXPLAIN query on the actual database.
  */
-export class SQLResponseValidator<TValue = string> implements PromptResponseValidator<TValue> {
+export class SQLQueryValidator<TValue = string> implements PromptResponseValidator<TValue> {
     /**
      * Feedback message to display when the SQL response has invalid syntax.
      */
@@ -27,7 +27,7 @@ export class SQLResponseValidator<TValue = string> implements PromptResponseVali
     private sqlQueryExecutor: SQLQueryExecutor;
 
     /**
-     * Creates a new `SQLResponseValidator` instance.
+     * Creates a new `SQLQueryValidator` instance.
      * @param {SQLQueryExecutor} sqlQueryExecutor Function to execute SQL queries against the database.
      * @param {string} invalidSQLFeedback Optional. Custom feedback message to display when the SQL response has invalid syntax.
      * Defaults to 'The provided SQL response has invalid syntax.'.
@@ -54,7 +54,16 @@ export class SQLResponseValidator<TValue = string> implements PromptResponseVali
         remaining_attempts: number
     ): Promise<Validation> {
         const message = response.message!;
-        const sqlString = message.content ?? '';
+        let sqlString = message.content ?? '';
+
+        // sanitise the sqlString by removing any content before the first SELECT text
+        // Find the position of the first occurrence of "SELECT"
+        const selectIndex = sqlString.indexOf("SELECT");
+
+        // If "SELECT" is found, extract the substring starting from that position
+        if (selectIndex !== -1) {
+            sqlString = sqlString.substring(selectIndex);
+        }
 
         // Check if the SQL syntax is valid
         if (this.isValidSQL(sqlString)) {
