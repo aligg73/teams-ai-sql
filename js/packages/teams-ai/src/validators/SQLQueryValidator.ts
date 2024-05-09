@@ -15,7 +15,7 @@ interface SQLQueryExecutor {
 /**
  * Validates a SQL Query to ensure it has valid syntax and optionally executes an EXPLAIN query on the actual database.
  */
-export class SQLQueryValidator<TValue = string> implements PromptResponseValidator<TValue> {
+export class SQLQueryValidator<TValue = Record<string, any>>  implements PromptResponseValidator<TValue> {
     /**
      * Feedback message to display when the SQL response has invalid syntax.
      */
