@@ -13,13 +13,13 @@ interface SQLQueryExecutor {
 }
 
 interface QueryData {
-    records: { "QUERY PLAN": string }[];
+    records: { 'QUERY PLAN': string }[];
 }
 
 /**
  * Validates a SQL Query to ensure it has valid syntax and optionally executes an EXPLAIN query on the actual database.
  */
-export class SQLQueryValidator<TValue = Record<string, any>>  implements PromptResponseValidator<TValue> {
+export class SQLQueryValidator<TValue = Record<string, any>> implements PromptResponseValidator<TValue> {
     /**
      * Feedback message to display when the SQL response has invalid syntax.
      */
@@ -35,13 +35,15 @@ export class SQLQueryValidator<TValue = Record<string, any>>  implements PromptR
     /**
      * Creates a new `SQLQueryValidator` instance.
      * @param {SQLQueryExecutor} sqlQueryExecutor Function to execute SQL queries against the database.
+     * @param {string[]} allowedJoins Array to hold valid JOINs
      * @param {string} invalidSQLFeedback Optional. Custom feedback message to display when the SQL response has invalid syntax.
      * Defaults to 'The provided SQL response has invalid syntax.'.
+     * @param {number} rowCountCeiling Number to indicate the threshold of records allowed
      */
     public constructor(
         sqlQueryExecutor: SQLQueryExecutor,
-        invalidSQLFeedback: string = 'The provided SQL response has invalid syntax.',
         allowedJoins: string[] = [],
+        invalidSQLFeedback: string = 'The provided SQL response has invalid syntax.',
         rowCountCeiling: number = 1500
     ) {
         this.sqlQueryExecutor = sqlQueryExecutor;
@@ -79,7 +81,7 @@ export class SQLQueryValidator<TValue = Record<string, any>>  implements PromptR
         }
 
         // Check if the SQL syntax is valid
-        if (this.isValidSQL(sqlString)) {
+        if (Object.keys(this.isValidSQL(sqlString)).length !== 0) {
             try {
                 // Execute EXPLAIN query on the actual database
                 const explanation = await this.sqlQueryExecutor(`EXPLAIN ${sqlString}`);
@@ -95,11 +97,12 @@ export class SQLQueryValidator<TValue = Record<string, any>>  implements PromptR
 
                 // check for valid JOINs
                 const feedbackJoins = this.containsValidJoins(sqlString);
-                if (feedbackJoins !== '') return {
+                if (feedbackJoins !== '')
+                    return {
                         type: 'Validation',
                         valid: false,
                         feedback: feedbackJoins
-                   }            
+                    };
 
                 return {
                     type: 'Validation',
@@ -127,29 +130,29 @@ export class SQLQueryValidator<TValue = Record<string, any>>  implements PromptR
      * @param {string} sqlString The SQL string to check.
      * @returns {boolean} True if the SQL syntax is valid, otherwise false.
      */
-    private isValidSQL(sqlString: string): boolean {
+    private isValidSQL(sqlString: string): object {
         // return true; // disabled because valid Postgres SQL queries like this one below are showing up as false negatives
         // SELECT ModifierGroups.title AS ModifierGroupTitle, string_agg(DISTINCT Items.title, ', ') AS ModifierOptions FROM ModifierGroups INNER JOIN Items_To_ModifierGroups ON ModifierGroups.id = Items_To_ModifierGroups.modifierGroupId INNER JOIN Items ON Items_To_ModifierGroups.itemId = Items.id LEFT JOIN ModifierGroups_To_Items ON ModifierGroups.id = ModifierGroups_To_Items.modifierGroupId LEFT JOIN Items AS ModifierItems ON ModifierGroups_To_Items.itemId = ModifierItems.id WHERE SOUNDEX(Items.title) = SOUNDEX('Bargain Bucket 6 Piece') GROUP BY ModifierGroupTitle;
         try {
             // Attempt to parse the SQL string
             const parser = new Parser();
-            parser.astify(sqlString, { database: 'Postgresql' });
-            return true; // The SQL syntax is valid
+            const parsedSql = parser.astify(sqlString, { database: 'Postgresql' });
+            return parsedSql; // The SQL syntax is valid
         } catch (error) {
-            return false; // The SQL syntax is invalid
+            return {}; // The SQL syntax is invalid
         }
     }
 
     /**
      * Validates the joins used in the sqlString against allowedJoins
-     * @param sqlString 
+     * @param {string} sqlString The SQL string to check.
      * @returns {string} A feedback message for the LLM to auto-correct
      */
-    private containsValidJoins(sqlString: string): string { 
+    private containsValidJoins(sqlString: string): string {
         // Extract all the joins from the exampleQuery
         const exampleJoins = sqlString.match(/INNER JOIN .*? ON .*?;/g);
         if (!exampleJoins) return ''; // No joins found in the example query
-    
+
         // Check if each join in sqlString is allowed
         const disallowedJoins: string[] = [];
         for (const join of exampleJoins) {
@@ -157,10 +160,11 @@ export class SQLQueryValidator<TValue = Record<string, any>>  implements PromptR
                 disallowedJoins.push(join);
             }
         }
-    
+
         // Generate feedback message for disallowed joins
         let feedback = '';
-        if (disallowedJoins.length > 0) feedback = 'The following joins are not correct, adhere to the SQL schema: ' + disallowedJoins.join('|');
+        if (disallowedJoins.length > 0)
+            feedback = 'The following joins are not correct, adhere to the SQL schema: ' + disallowedJoins.join('|');
         return feedback;
     }
 
@@ -169,14 +173,14 @@ export class SQLQueryValidator<TValue = Record<string, any>>  implements PromptR
             if (!data || !data.records || !data.records.length) {
                 return null; // Return null if data is empty or records array is missing or empty
             }
-            
-            const queryPlan = data.records[0]["QUERY PLAN"];
+
+            const queryPlan = data.records[0]['QUERY PLAN'];
             const match = queryPlan.match(/rows=(\d+)/);
             const rows = match ? parseInt(match[1]) : null;
-            
+
             return rows;
         } catch (error) {
             return null; // Return null if an error occurs
-        } 
+        }
     }
 }
