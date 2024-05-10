@@ -149,18 +149,22 @@ export class SQLQueryValidator<TValue = Record<string, any>> implements PromptRe
      * @returns {string} A feedback message for the LLM to auto-correct
      */
     private containsValidJoins(sqlString: string): string {
-        // Extract all the joins from the exampleQuery
-        const exampleJoins = sqlString.match(/INNER JOIN .*? ON .*?;/g);
-        if (!exampleJoins) return ''; // No joins found in the example query
+        const innerJoins = [];
+        const joinRegex = /INNER JOIN\s+\S+\s+ON\s+\S+\s*=\s*\S+/g;
 
+        let match;
+        while ((match = joinRegex.exec(sqlString)) !== null) {
+            innerJoins.push(match[0]);
+        }
+
+        if (!innerJoins || innerJoins.length === 0) return ''; // No joins found in the example query
         // Check if each join in sqlString is allowed
-        const disallowedJoins: string[] = [];
-        for (const join of exampleJoins) {
+        const disallowedJoins = [];
+        for (const join of innerJoins) {
             if (!this.allowedJoins.includes(join)) {
                 disallowedJoins.push(join);
             }
         }
-
         // Generate feedback message for disallowed joins
         let feedback = '';
         if (disallowedJoins.length > 0)
