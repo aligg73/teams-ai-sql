@@ -25,6 +25,7 @@ export class SQLQueryValidator<TValue = Record<string, any>>  implements PromptR
      */
     public invalidSQLFeedback: string;
     public rowCountCeiling: number;
+    public allowedJoins: string[];
 
     /**
      * Function to execute SQL queries against the database.
@@ -40,10 +41,12 @@ export class SQLQueryValidator<TValue = Record<string, any>>  implements PromptR
     public constructor(
         sqlQueryExecutor: SQLQueryExecutor,
         invalidSQLFeedback: string = 'The provided SQL response has invalid syntax.',
+        allowedJoins: string[] = [],
         rowCountCeiling: number = 1500
     ) {
         this.sqlQueryExecutor = sqlQueryExecutor;
         this.invalidSQLFeedback = invalidSQLFeedback;
+        this.allowedJoins = allowedJoins;
         this.rowCountCeiling = rowCountCeiling;
     }
 
@@ -90,6 +93,14 @@ export class SQLQueryValidator<TValue = Record<string, any>>  implements PromptR
                     };
                 }
 
+                // check for valid JOINs
+                const feedbackJoins = this.containsValidJoins(sqlString);
+                if (feedbackJoins !== '') return {
+                        type: 'Validation',
+                        valid: false,
+                        feedback: feedbackJoins
+                   }            
+
                 return {
                     type: 'Validation',
                     valid: true,
@@ -117,7 +128,7 @@ export class SQLQueryValidator<TValue = Record<string, any>>  implements PromptR
      * @returns {boolean} True if the SQL syntax is valid, otherwise false.
      */
     private isValidSQL(sqlString: string): boolean {
-        return true; // disabled because valid Postgres SQL queries like this one below are showing up as false negatives
+        // return true; // disabled because valid Postgres SQL queries like this one below are showing up as false negatives
         // SELECT ModifierGroups.title AS ModifierGroupTitle, string_agg(DISTINCT Items.title, ', ') AS ModifierOptions FROM ModifierGroups INNER JOIN Items_To_ModifierGroups ON ModifierGroups.id = Items_To_ModifierGroups.modifierGroupId INNER JOIN Items ON Items_To_ModifierGroups.itemId = Items.id LEFT JOIN ModifierGroups_To_Items ON ModifierGroups.id = ModifierGroups_To_Items.modifierGroupId LEFT JOIN Items AS ModifierItems ON ModifierGroups_To_Items.itemId = ModifierItems.id WHERE SOUNDEX(Items.title) = SOUNDEX('Bargain Bucket 6 Piece') GROUP BY ModifierGroupTitle;
         try {
             // Attempt to parse the SQL string
@@ -127,6 +138,30 @@ export class SQLQueryValidator<TValue = Record<string, any>>  implements PromptR
         } catch (error) {
             return false; // The SQL syntax is invalid
         }
+    }
+
+    /**
+     * Validates the joins used in the sqlString against allowedJoins
+     * @param sqlString 
+     * @returns {string} A feedback message for the LLM to auto-correct
+     */
+    private containsValidJoins(sqlString: string): string { 
+        // Extract all the joins from the exampleQuery
+        const exampleJoins = sqlString.match(/INNER JOIN .*? ON .*?;/g);
+        if (!exampleJoins) return ''; // No joins found in the example query
+    
+        // Check if each join in sqlString is allowed
+        const disallowedJoins: string[] = [];
+        for (const join of exampleJoins) {
+            if (!this.allowedJoins.includes(join)) {
+                disallowedJoins.push(join);
+            }
+        }
+    
+        // Generate feedback message for disallowed joins
+        let feedback = '';
+        if (disallowedJoins.length > 0) feedback = 'The following joins are not correct, adhere to the SQL schema: ' + disallowedJoins.join('|');
+        return feedback;
     }
 
     private extractRowsFromQueryPlan(data: QueryData): number | null {
@@ -142,6 +177,6 @@ export class SQLQueryValidator<TValue = Record<string, any>>  implements PromptR
             return rows;
         } catch (error) {
             return null; // Return null if an error occurs
-        }
+        } 
     }
 }
