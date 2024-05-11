@@ -3,7 +3,7 @@ import { Tokenizer } from '../tokenizers';
 import { PromptResponse } from '../models';
 import { Validation, PromptResponseValidator } from './PromptResponseValidator';
 import { Memory } from '../MemoryFork';
-import { Parser } from 'node-sql-parser'; // Import the parse function from the node-sql-parser package
+// import { Parser } from 'node-sql-parser'; // Import the parse function from the node-sql-parser package
 
 /**
  * Interface for a function that executes SQL queries against the database.
@@ -131,16 +131,18 @@ export class SQLQueryValidator<TValue = Record<string, any>> implements PromptRe
      * @returns {boolean} True if the SQL syntax is valid, otherwise false.
      */
     private isValidSQL(sqlString: string): object {
-        // return true; // disabled because valid Postgres SQL queries like this one below are showing up as false negatives
+        return { result: true }; // disabled because valid Postgres SQL queries like this one below are showing up as false negatives
         // SELECT ModifierGroups.title AS ModifierGroupTitle, string_agg(DISTINCT Items.title, ', ') AS ModifierOptions FROM ModifierGroups INNER JOIN Items_To_ModifierGroups ON ModifierGroups.id = Items_To_ModifierGroups.modifierGroupId INNER JOIN Items ON Items_To_ModifierGroups.itemId = Items.id LEFT JOIN ModifierGroups_To_Items ON ModifierGroups.id = ModifierGroups_To_Items.modifierGroupId LEFT JOIN Items AS ModifierItems ON ModifierGroups_To_Items.itemId = ModifierItems.id WHERE SOUNDEX(Items.title) = SOUNDEX('Bargain Bucket 6 Piece') GROUP BY ModifierGroupTitle;
-        try {
-            // Attempt to parse the SQL string
-            const parser = new Parser();
-            const parsedSql = parser.astify(sqlString, { database: 'Postgresql' });
-            return parsedSql; // The SQL syntax is valid
-        } catch (error) {
-            return {}; // The SQL syntax is invalid
-        }
+        // TO DO disabled because we get this error: import Parser from './src/parser'^^^^^^
+        // SyntaxError: Cannot use import statement outside a moduleat internalCompileFunction
+        // try {
+        //     // Attempt to parse the SQL string
+        //     const parser = new Parser();
+        //     const parsedSql = parser.astify(sqlString, { database: 'Postgresql' });
+        //     return parsedSql; // The SQL syntax is valid
+        // } catch (error) {
+        //     return {}; // The SQL syntax is invalid
+        // }
     }
 
     /**

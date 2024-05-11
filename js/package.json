@@ -21,9 +21,7 @@
     },
     "dependencies": {
         "botbuilder": "^4.22.2",
-        "node-sql-parser": "^5.1.0",
-        "openai": "4.28.4",
-        "openai-gpt-token-counter": "^1.1.1"
+        "openai": "4.28.4"
     },
     "devDependencies": {
         "@azure/logger": "^1.1.2",
