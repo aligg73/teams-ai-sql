@@ -87,6 +87,14 @@ export class SQLQueryValidator<TValue = Record<string, any>> implements PromptRe
                 const explanation = await this.sqlQueryExecutor(`EXPLAIN ${sqlString}`);
                 const rowCount = this.extractRowsFromQueryPlan(explanation);
 
+                if (!rowCount || rowCount === 0) {
+                    return {
+                        type: 'Validation',
+                        valid: false,
+                        feedback: `The provided SQL doesn't return any rows. Adjust the query to try something else.`
+                    };
+                }
+
                 if (rowCount && rowCount > this.rowCountCeiling) {
                     return {
                         type: 'Validation',
