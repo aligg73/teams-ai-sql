@@ -8,13 +8,13 @@ import { Memory } from '../MemoryFork';
 /**
  * Interface for a function that executes SQL queries against the database.
  */
-interface SQLQueryExecutor {
-    (sqlQuery: string): Promise<any>; // Modify the return type as per your database response
-}
+// interface SQLQueryExecutor {
+//     (sqlQuery: string): Promise<any>; // Modify the return type as per your database response
+// }
 
-interface QueryData {
-    records: { 'QUERY PLAN': string }[];
-}
+// interface QueryData {
+//     records: { 'QUERY PLAN': string }[];
+// }
 
 /**
  * Validates a SQL Query to ensure it has valid syntax and optionally executes an EXPLAIN query on the actual database.
@@ -30,23 +30,23 @@ export class SQLQueryValidator<TValue = Record<string, any>> implements PromptRe
     /**
      * Function to execute SQL queries against the database.
      */
-    private sqlQueryExecutor: SQLQueryExecutor;
+    // private sqlQueryExecutor: SQLQueryExecutor;
 
-    /**
-     * Creates a new `SQLQueryValidator` instance.
-     * @param {SQLQueryExecutor} sqlQueryExecutor Function to execute SQL queries against the database.
-     * @param {string[]} allowedJoins Array to hold valid JOINs
-     * @param {string} invalidSQLFeedback Optional. Custom feedback message to display when the SQL response has invalid syntax.
-     * Defaults to 'The provided SQL response has invalid syntax.'.
-     * @param {number} rowCountCeiling Number to indicate the threshold of records allowed
-     */
+    // /**
+    //  * Creates a new `SQLQueryValidator` instance.
+    //  * @param {SQLQueryExecutor} sqlQueryExecutor Function to execute SQL queries against the database.
+    //  * @param {string[]} allowedJoins Array to hold valid JOINs
+    //  * @param {string} invalidSQLFeedback Optional. Custom feedback message to display when the SQL response has invalid syntax.
+    //  * Defaults to 'The provided SQL response has invalid syntax.'.
+    //  * @param {number} rowCountCeiling Number to indicate the threshold of records allowed
+    //  */
     public constructor(
-        sqlQueryExecutor: SQLQueryExecutor,
+        // sqlQueryExecutor: SQLQueryExecutor,
         allowedJoins: string[] = [],
         invalidSQLFeedback: string = 'The provided SQL response has invalid syntax.',
         rowCountCeiling: number = 1500
     ) {
-        this.sqlQueryExecutor = sqlQueryExecutor;
+        // this.sqlQueryExecutor = sqlQueryExecutor;
         this.invalidSQLFeedback = invalidSQLFeedback;
         this.allowedJoins = allowedJoins;
         this.rowCountCeiling = rowCountCeiling;
@@ -183,19 +183,19 @@ export class SQLQueryValidator<TValue = Record<string, any>> implements PromptRe
         return feedback;
     }
 
-    private extractRowsFromQueryPlan(data: QueryData): number | null {
-        try {
-            if (!data || !data.records || !data.records.length) {
-                return null; // Return null if data is empty or records array is missing or empty
-            }
+    // private extractRowsFromQueryPlan(data: QueryData): number | null {
+    //     try {
+    //         if (!data || !data.records || !data.records.length) {
+    //             return null; // Return null if data is empty or records array is missing or empty
+    //         }
 
-            const queryPlan = data.records[0]['QUERY PLAN'];
-            const match = queryPlan.match(/rows=(\d+)/);
-            const rows = match ? parseInt(match[1]) : null;
+    //         const queryPlan = data.records[0]['QUERY PLAN'];
+    //         const match = queryPlan.match(/rows=(\d+)/);
+    //         const rows = match ? parseInt(match[1]) : null;
 
-            return rows;
-        } catch (error) {
-            return null; // Return null if an error occurs
-        }
-    }
+    //         return rows;
+    //     } catch (error) {
+    //         return null; // Return null if an error occurs
+    //     }
+    // }
 }
