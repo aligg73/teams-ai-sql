@@ -16,6 +16,12 @@ import { Memory } from '../MemoryFork';
 //     records: { 'QUERY PLAN': string }[];
 // }
 
+interface Config {
+    allowedJoins?: string[];
+    invalidSQLFeedback?: string;
+    rowCountCeiling?: number;
+}   
+
 /**
  * Validates a SQL Query to ensure it has valid syntax and optionally executes an EXPLAIN query on the actual database.
  */
@@ -40,15 +46,17 @@ export class SQLQueryValidator<TValue = Record<string, any>> implements PromptRe
     //  * Defaults to 'The provided SQL response has invalid syntax.'.
     //  * @param {number} rowCountCeiling Number to indicate the threshold of records allowed
     //  */
-    public constructor(
-        // sqlQueryExecutor: SQLQueryExecutor,
-        allowedJoins: string[] = [],
-        invalidSQLFeedback: string = 'The provided SQL response has invalid syntax.',
-        rowCountCeiling: number = 1500
-    ) {
+    public constructor(config: Config = {}) {
+        const {
+            // sqlQueryExecutor: SQLQueryExecutor,
+            allowedJoins = [],
+            invalidSQLFeedback = 'The provided SQL response has invalid syntax.',
+            rowCountCeiling = 1500
+        } = config;
+    
         // this.sqlQueryExecutor = sqlQueryExecutor;
-        this.invalidSQLFeedback = invalidSQLFeedback;
         this.allowedJoins = allowedJoins;
+        this.invalidSQLFeedback = invalidSQLFeedback;
         this.rowCountCeiling = rowCountCeiling;
     }
 
@@ -172,7 +180,7 @@ export class SQLQueryValidator<TValue = Record<string, any>> implements PromptRe
         // Check if each join in sqlString is allowed
         const disallowedJoins = [];
         for (const join of innerJoins) {
-            if (!this.allowedJoins.includes(join)) {
+            if (this.allowedJoins.indexOf(join) === -1) {
                 disallowedJoins.push(join);
             }
         }
