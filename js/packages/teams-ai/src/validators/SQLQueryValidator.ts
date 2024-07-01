@@ -84,24 +84,25 @@ export class SQLQueryValidator<TValue = Record<string, any>> implements PromptRe
         if (Object.keys(this.isValidSQL(sqlString)).length !== 0) {
             try {
                 // Execute EXPLAIN query on the actual database
-                const explanation = await this.sqlQueryExecutor(`EXPLAIN ${sqlString}`);
-                const rowCount = this.extractRowsFromQueryPlan(explanation);
+                // const explanation = await this.sqlQueryExecutor(`EXPLAIN ${sqlString}`);
+                // const rowCount = this.extractRowsFromQueryPlan(explanation);
 
-                if (!rowCount || rowCount === 0) {
-                    return {
-                        type: 'Validation',
-                        valid: false,
-                        feedback: `The provided SQL doesn't return any rows. Adjust the query to try something else.`
-                    };
-                }
+                // TO DO disabled rowCount checks, because of SOUNDEX queries clarification first
+                // if (!rowCount || rowCount === 0) {
+                //     return {
+                //         type: 'Validation',
+                //         valid: false,
+                //         feedback: `The provided SQL doesn't return any rows. Adjust the query to try something else.`
+                //     };
+                // }
 
-                if (rowCount && rowCount > this.rowCountCeiling) {
-                    return {
-                        type: 'Validation',
-                        valid: false,
-                        feedback: `The provided SQL generates too many rows: (${rowCount}). The maximum allowed is ${this.rowCountCeiling}. Adjust the query to LIMIT the results.`
-                    };
-                }
+                // if (rowCount && rowCount > this.rowCountCeiling) {
+                //     return {
+                //         type: 'Validation',
+                //         valid: false,
+                //         feedback: `The provided SQL generates too many rows: (${rowCount}). The maximum allowed is ${this.rowCountCeiling}. Adjust the query to LIMIT the results.`
+                //     };
+                // }
 
                 // check for valid JOINs
                 const feedbackJoins = this.containsValidJoins(sqlString);
