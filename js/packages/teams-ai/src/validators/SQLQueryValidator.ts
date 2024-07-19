@@ -1,6 +1,6 @@
 import { TurnContext } from 'botbuilder';
 import { Tokenizer } from '../tokenizers';
-import { PromptResponse } from '../models';
+// import { PromptResponse } from '../models';
 import { Validation, PromptResponseValidator } from './PromptResponseValidator';
 import { Memory } from '../MemoryFork';
 // import { Parser } from 'node-sql-parser'; // Import the parse function from the node-sql-parser package
@@ -20,7 +20,7 @@ interface Config {
     allowedJoins?: string[];
     invalidSQLFeedback?: string;
     rowCountCeiling?: number;
-}   
+}
 
 /**
  * Validates a SQL Query to ensure it has valid syntax and optionally executes an EXPLAIN query on the actual database.
@@ -35,6 +35,7 @@ export class SQLQueryValidator<TValue = Record<string, any>> implements PromptRe
 
     /**
      * Function to execute SQL queries against the database.
+     * @param config
      */
     // private sqlQueryExecutor: SQLQueryExecutor;
 
@@ -53,7 +54,7 @@ export class SQLQueryValidator<TValue = Record<string, any>> implements PromptRe
             invalidSQLFeedback = 'The provided SQL response has invalid syntax.',
             rowCountCeiling = 1500
         } = config;
-    
+
         // this.sqlQueryExecutor = sqlQueryExecutor;
         this.allowedJoins = allowedJoins;
         this.invalidSQLFeedback = invalidSQLFeedback;
@@ -65,7 +66,7 @@ export class SQLQueryValidator<TValue = Record<string, any>> implements PromptRe
      * @param {TurnContext} context Context for the current turn of conversation with the user.
      * @param {Memory} memory An interface for accessing state values.
      * @param {Tokenizer} tokenizer Tokenizer to use for encoding and decoding text.
-     * @param {PromptResponse<string>} response Response to validate.
+     * @param {any} response response Response to validate.
      * @param {number} remaining_attempts Number of remaining attempts to validate the response.
      * @returns {Promise<Validation>} A `Validation` object.
      */
@@ -73,7 +74,7 @@ export class SQLQueryValidator<TValue = Record<string, any>> implements PromptRe
         context: TurnContext,
         memory: Memory,
         tokenizer: Tokenizer,
-        response: PromptResponse<string>,
+        response: any,
         remaining_attempts: number
     ): Promise<Validation> {
         const message = response.message!;
