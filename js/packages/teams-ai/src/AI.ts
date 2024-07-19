@@ -8,11 +8,11 @@
 
 import { TurnContext } from 'botbuilder';
 
+import * as actions from './actions';
 import { DefaultModerator } from './moderators';
 import { Moderator } from './moderators/Moderator';
 import { PredictedDoCommand, Planner, Plan } from './planners';
 import { TurnState } from './TurnState';
-import * as actions from './actions';
 
 /**
  * Options for configuring the AI system.
@@ -60,7 +60,10 @@ export interface AIOptions<TState extends TurnState> {
 
     /**
      * Optional. If true, the AI system will enable the feedback loop in Teams that allows a user to give thumbs up or down to a response. Default is `false`.
-     * NOTE: At this time, there is no activity handler support in the Teams AI Library to handle when a user gives feedback.
+     * @remarks
+     * At this time, there is no activity handler support in the Teams AI Library to handle when a user gives feedback.
+     * To make use of the feedback loop, use the app.feedbackLoop route registration.
+     * https://github.com/microsoft/teams-ai/blob/main/getting-started/CONCEPTS/POWERED-BY-AI.md
      */
     enable_feedback_loop?: boolean;
 }
@@ -361,7 +364,7 @@ export class AI<TState extends TurnState = TurnState> {
             let plan: Plan | undefined =
                 step_count == 0 ? await this._options.moderator.reviewInput(context, state) : undefined;
 
-            // Generate plan
+            // Generate plan if moderator did not return one as flag for input.
             if (!plan) {
                 if (step_count == 0) {
                     plan = await this._options.planner.beginTask(context, state, this);
@@ -369,7 +372,7 @@ export class AI<TState extends TurnState = TurnState> {
                     plan = await this._options.planner.continueTask(context, state, this);
                 }
 
-                // Review the plans output
+                // Review the plan's output
                 plan = await this._options.moderator.reviewOutput(context, state, plan);
             }
 
@@ -417,7 +420,9 @@ export class AI<TState extends TurnState = TurnState> {
                             state.temp.actionOutputs[action] = output;
                         } else {
                             // Redirect to UnknownAction handler
-                            output = await this._actions.get(AI.UnknownActionName)!.handler(context, state, plan, action);
+                            output = await this._actions
+                                .get(AI.UnknownActionName)!
+                                .handler(context, state, plan, action);
                         }
                         break;
                     }

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from logging import Logger
-from typing import Callable, Dict, Generic, Optional, TypeVar
+from typing import Any, Callable, Dict, Generic, Optional, TypeVar
 
 from botbuilder.core import TurnContext
 from botbuilder.schema import Activity, ActivityTypes
@@ -19,10 +19,11 @@ from ..utils import snippet
 from ..utils.citations import format_citations_response, get_used_citations
 from .actions import ActionEntry, ActionHandler, ActionTurnContext, ActionTypes
 from .ai_options import AIOptions
-from .citations.citations import Appearance, ClientCitation
+from .citations.citations import AIEntity, Appearance, ClientCitation
 from .moderators.moderator import Moderator
 from .planners.plan import Plan, PredictedDoCommand, PredictedSayCommand
 from .planners.planner import Planner
+from .prompts import MessageContext
 
 StateT = TypeVar("StateT", bound=TurnState)
 
@@ -283,17 +284,16 @@ class AI(Generic[StateT]):
 
         if (
             msg_context
-            and isinstance(msg_context, dict)
-            and "citations" in msg_context
-            and len(msg_context["citations"]) > 0
+            and isinstance(msg_context, MessageContext)
+            and len(msg_context.citations) > 0
         ):
-            for i, citation in enumerate(msg_context["citations"]):
+            for i, citation in enumerate(msg_context.citations):
                 citations.append(
                     ClientCitation(
-                        position=f"[{i + 1}]",
+                        position=f"{i + 1}",
                         appearance=Appearance(
-                            name=citation["title"],
-                            abstract=snippet(citation["abstract"], 500),
+                            name=citation.title or f"Document {i + 1}",
+                            abstract=snippet(citation.content, 500),
                         ),
                     )
                 )
@@ -315,18 +315,10 @@ class AI(Generic[StateT]):
                 text=content_text,
                 channel_data=channel_data,
                 entities=[
-                    {
-                        "type": "https://schema.org/Message",
-                        "@type": "Message",
-                        "@context": "https://schema.org",
-                        "@id": "",
-                        "additionalType": ["AIGeneratedContent"],
-                        **(
-                            {"citation": [citation.__dict__ for citation in referenced_citations]}
-                            if referenced_citations
-                            else {}
-                        ),
-                    }
+                    AIEntity(
+                        citation=(list(referenced_citations) if referenced_citations else []),
+                        additional_type=["AIGeneratedContent"],
+                    ),
                 ],
             )
         )
@@ -340,3 +332,28 @@ class AI(Generic[StateT]):
     ) -> str:
         self._logger.error("The run retrieval for the Assistants Planner has expired.")
         return ActionTypes.STOP
+
+    async def do_action(
+        self,
+        context: TurnContext,
+        state: StateT,
+        action: str,
+        parameters: Optional[Dict[str, Any]] = None,
+    ) -> str:
+        """
+        Manually executes a named action.
+
+        Args:
+            context (TurnContext): Current turn context.
+            state (StateT): Current turn state.
+            action (str): Name of the action to execute.
+            parameters (Optional[Dict[str, Any]]): Optional. Entities to pass to the action.
+
+        Returns:
+            str: The result of the action.
+        """
+        if action not in self._actions:
+            raise ApplicationError(f"Can't find an action named '{action}'.")
+
+        action_entry = self._actions[action]
+        return await action_entry.invoke(context, state, parameters, action)
